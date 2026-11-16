@@ -782,8 +782,8 @@ h2[tabindex="-1"]:focus {
     <div class="hero-copy"><p class="eyebrow">A LITTLE LESS LOOKS. A LITTLE MORE YOU.</p>
     <h1 id="title">사진은 잠시,<br><em>이야기가 먼저.</em></h1>
     <p class="hero-description">하루 세 명, 서로의 취향에서 시작하는 만남.<br>어떤 사람인지, 천천히 읽어보세요.</p>
-    <div class="actions"><button id="google" hidden>Google로 로그인</button><button id="start" class="secondary">샘플로 체험하기</button></div>
-    <p><small>샘플 체험은 계정 없이 이용할 수 있어요. 입력한 내용은 이 창을 닫으면 사라져요.</small></p>
+    <div class="actions"><button id="google" hidden>Google로 로그인</button></div>
+    <p><small>Google 계정으로 시작하고, 나의 소개와 만남 조건을 작성해 주세요.</small></p>
     <p id="auth-status" class="status" role="status"></p></div><div class="hero-art" aria-hidden="true"><div class="orbit"></div><div class="sample-card"><span class="sample-label">SAMPLE NOTE / 01</span><p>좋아하는 책의<br>첫 문장을 나누고 싶어요.</p><span class="tag"># 독서</span> <span class="tag"># 느린 대화</span></div><div class="sample-card"><span class="sample-label">SAMPLE NOTE / 02</span><p>목적지 없이 걷는<br>산책도 좋아하나요?</p><span class="tag"># 산책</span> <span class="tag"># 작은 발견</span></div><span class="sample-caption">예시 소개글 · 실제 회원 정보가 아니에요</span></div>
   </section>
   <section id="onboard" hidden>
@@ -815,7 +815,8 @@ h2[tabindex="-1"]:focus {
         <label>상대 문신<select name="wantedTattoo"><option>상관없음</option><option value="없음">없는 사람만</option></select></label>
         <label>상대 흡연 조건<select name="wantedSmoking"><option>상관없음</option><option value="비흡연">비흡연자만</option><option value="전자담배까지">전자담배까지 괜찮음</option></select></label>
       </div></fieldset>
-      <button>오늘의 추천 보기</button>
+      <button type="submit">저장하고 추천 보기</button>
+      <button id="cancel-edit" type="button" class="secondary" hidden>추천으로 돌아가기</button>
       <p id="error" class="status" role="alert"></p>
     </form></div>
   </section>
@@ -829,16 +830,7 @@ h2[tabindex="-1"]:focus {
 <footer><span>오늘 세 명 · THREE, EVERY DAY</span><span>서로를 알아가는, 조금 다른 시작 <span class="footer-heart">♡</span></span></footer></main>
 <script src="supabase-config.js"></script>
 <script>
-  const people = [
-    {id:1,smoking:'비흡연',name:'초록책갈피',age:29,gender:'남성',region:'서울',tattoo:'없음',interests:['독서','산책'],bio:'일요일 아침엔 도서관에 가요. 다 읽은 책 얘기를 같이 할 사람이면 좋겠어요.', likesYou:true},
-    {id:2,smoking:'전자담배',name:'구름우편',age:31,gender:'남성',region:'경기',tattoo:'있음',interests:['산책','사진'],bio:'퇴근길에 하늘을 자주 봐요. 좋아하는 골목을 하나씩 소개해 주고 싶어요.', likesYou:false},
-    {id:3,smoking:'비흡연',name:'잔잔한밤',age:27,gender:'남성',region:'서울',tattoo:'없음',interests:['영화','음악'],bio:'보고 나서 며칠 동안 생각나는 영화를 좋아해요. 최근에 그런 영화가 있었나요?', likesYou:true},
-    {id:4,smoking:'흡연',name:'온더테이블',age:33,gender:'남성',region:'인천',tattoo:'없음',interests:['요리','러닝'],bio:'친구들에게 저녁을 차려 주는 날이 제일 재밌어요.', likesYou:false},
-    {id:5,smoking:'비흡연',name:'오늘의차',age:28,gender:'여성',region:'서울',tattoo:'없음',interests:['산책','차'],bio:'새로운 찻집을 발견하면 지도에 저장해요. 산책하다 쉬어 가기 좋은 곳을 알아요.', likesYou:true},
-    {id:6,smoking:'전자담배',name:'작은파도',age:30,gender:'여성',region:'경기',tattoo:'있음',interests:['독서','음악'],bio:'책 한 권 들고 기차 타는 걸 좋아해요. 목적지는 자주 바뀌어요.', likesYou:false},
-  ];
   const $ = id => document.getElementById(id);
-  const choices = new Map();
   const choiceLabels = {matched:'서로 좋아요 · 매칭 성사!', liked:'좋아요를 보냈어요', passed:'넘겼어요'};
   let client;
   let live = false;
@@ -880,17 +872,6 @@ h2[tabindex="-1"]:focus {
     const [nowYear, nowMonth, nowDay] = today.split('-').map(Number);
     return nowYear - year - Number(nowMonth * 100 + nowDay < month * 100 + day);
   }
-  function recommend(profile) {
-    const fits = (wanted, actual) => wanted === '상관없음' || wanted === actual;
-    const interests = new Set(profile.interests.split(',').map(tag => tag.trim()).filter(Boolean));
-    const score = person => person.interests.filter(tag => interests.has(tag)).length;
-    return people.filter(person => person.age >= Number(profile.min) && person.age <= Number(profile.max)
-      && fits(profile.wantedGender, person.gender) && fits(profile.wantedRegion, person.region)
-      && fits(profile.wantedTattoo, person.tattoo)
-      && (profile.wantedSmoking === '상관없음' || profile.wantedSmoking === person.smoking
-        || (profile.wantedSmoking === '전자담배까지' && ['비흡연','전자담배'].includes(person.smoking))))
-      .sort((a,b) => score(b) - score(a) || a.id - b.id).slice(0,3);
-  }
   function show(id) {
     for (const panel of ['welcome','onboard','results']) $(panel).hidden = panel !== id;
     $(id).querySelector('h2')?.focus();
@@ -903,20 +884,20 @@ h2[tabindex="-1"]:focus {
   }
   function showCards(matches) {
     $('count').textContent = `${matches.length}명`;
-    $('result-note').textContent = live
-      ? (matches.length ? '한국 시간 기준으로 하루에 최대 3명을 소개해요.' : '오늘의 추천이 0명이에요. 다른 가입자가 없거나 서로의 조건에 맞는 새로운 상대가 없을 수 있어요. 샘플 프로필은 회원 추천에 포함되지 않아요. 오늘의 추천은 내일 다시 생성돼요.')
-      : (matches.length ? '희망 조건에 맞는 샘플 중 관심사가 겹치는 사람을 먼저 보여줘요.' : '조건에 맞는 샘플이 없어요. 나이 범위나 지역을 조정해 보세요.');
+    $('result-note').textContent = matches.length
+      ? '한국 시간 기준으로 하루에 최대 3명을 소개해요.'
+      : '오늘의 추천이 0명이에요. 다른 가입자가 없거나 서로의 조건에 맞는 새로운 상대가 없을 수 있어요. 오늘의 추천은 내일 다시 생성돼요.';
     $('feedback').textContent = '';
     $('cards').replaceChildren();
     if (!matches.length) {
       const empty = element('div','','empty-state');
       const orbit = element('div','3','empty-orbit');
       orbit.setAttribute('aria-hidden','true');
-      empty.append(orbit,element('h3','새로운 이야기를 기다리는 중이에요.'),element('p',live ? '서로의 조건에 맞는 새로운 상대를 찾으면 소개해 드릴게요. 내일 다시 만나봐요.' : '조건을 조금 넓혀보면 새로운 취향을 만날 수도 있어요.'));
+      empty.append(orbit,element('h3','새로운 이야기를 기다리는 중이에요.'),element('p','서로의 조건에 맞는 새로운 상대를 찾으면 소개해 드릴게요. 내일 다시 만나봐요.'));
       $('cards').append(empty);
     }
     for (const person of matches) {
-      let choice = live ? choiceLabels[person.choice] : choices.get(person.id);
+      let choice = choiceLabels[person.choice];
       const card = element('article','');
       const tags = element('div','','tags');
       for (const tag of person.interests) tags.append(element('span',tag,'tag'));
@@ -935,17 +916,12 @@ h2[tabindex="-1"]:focus {
             const buttons = [...actions.querySelectorAll('button')];
             buttons.forEach(control => control.disabled = true);
             try {
-              if (live) {
-                const result = await rpc('oneul_choose',{person:person.id,like_them:liked});
-                if (version !== sessionVersion) return;
-                choice = choiceLabels[result];
-              } else {
-                choice = choiceLabels[liked ? (person.likesYou ? 'matched' : 'liked') : 'passed'];
-                choices.set(person.id,choice);
-              }
+              const result = await rpc('oneul_choose',{person:person.id,like_them:liked});
+              if (version !== sessionVersion) return;
+              choice = choiceLabels[result];
               $('feedback').textContent = `${person.name} · ${choice}`;
               showChoice();
-              if (live && choice === choiceLabels.matched) await showMatches(version);
+              if (choice === choiceLabels.matched) await showMatches(version);
             } catch {
               if (version === sessionVersion) $('feedback').textContent = '선택을 처리하지 못했어요. 새로고침 후 다시 확인해 주세요.';
             } finally {
@@ -985,6 +961,7 @@ h2[tabindex="-1"]:focus {
     form.reset();
     setBirthday('');
     for (const name of ['nickname','birth','interests','bio']) form.elements.namedItem(name).value = '';
+    $('cancel-edit').hidden = !profile;
     if (!profile) return;
     const names = {wanted_gender:'wantedGender',min_age:'min',max_age:'max',wanted_region:'wantedRegion',wanted_tattoo:'wantedTattoo',wanted_smoking:'wantedSmoking'};
     for (const [name,value] of Object.entries(profile)) {
@@ -997,9 +974,17 @@ h2[tabindex="-1"]:focus {
       if (input) input.value = value;
     }
   }
-  $('start').addEventListener('click',() => {
-    $('mode').textContent = '샘플 데이터 · 체험판';
-    show('onboard');
+  $('cancel-edit').addEventListener('click',async () => {
+    const version = sessionVersion;
+    $('cancel-edit').disabled = true;
+    try {
+      const profile = await rpc('oneul_profile');
+      if (version !== sessionVersion) return;
+      fillProfile(profile);
+      await showToday(version);
+    } catch {
+      if (version === sessionVersion) $('error').textContent = '추천을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
+    } finally { $('cancel-edit').disabled = false; }
   });
   $('edit').addEventListener('click',() => {
     $('error').textContent = '';
@@ -1023,8 +1008,8 @@ h2[tabindex="-1"]:focus {
     $('error').textContent = error;
     if (error) return;
     if (!live) {
-      showCards(recommend(profile));
-      show('results');
+      show('welcome');
+      $('auth-status').textContent = '먼저 Google 계정으로 로그인해 주세요.';
       return;
     }
     const version = sessionVersion;
@@ -1077,7 +1062,6 @@ h2[tabindex="-1"]:focus {
       const version = ++sessionVersion;
       live = Boolean(nextUser);
       $('mode').textContent = live ? '회원 모드' : '사진 없는 소개팅';
-      $('start').hidden = live;
       $('google').hidden = live;
       $('logout').hidden = !live;
       $('refresh').hidden = !live;
@@ -1086,6 +1070,7 @@ h2[tabindex="-1"]:focus {
       $('match-list').replaceChildren();
       $('error').textContent = '';
       $('auth-status').textContent = '';
+      $('cancel-edit').hidden = true;
       $('profile').reset();
       setBirthday('');
       show('welcome');
